@@ -23,7 +23,7 @@ class Field:
         self.widget = None
 
     def __repr__(self):
-        return f'<Field {self.key} ({self.label})>'
+        return '<Field %s (%s)>' % (self.key, self.label)
 
 
 class Converter:

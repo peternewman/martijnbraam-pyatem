@@ -31,19 +31,19 @@ def main():
     elif len(existing) > 1:
         print("Multiple converters found, not handled yet")
         for dev in existing:
-            print(f" - {dev.NAME}")
+            print(" - %s" % {dev.NAME})
         exit(1)
 
     deviceclass = existing[0]
 
-    print(f"Product:  {deviceclass.NAME}")
+    print("Product:  %s" % deviceclass.NAME)
 
     device = deviceclass()
     device.connect()
     last_section = None
     for field in device.get_state().values():
         if field.section != last_section:
-            print(f"\n===[ {field.section} ]===")
+            print("\n===[ %s ]===" % field.section)
             last_section = field.section
         if field.dtype == str:
             value = field.value.split(b'\0')[0].decode()
@@ -59,12 +59,12 @@ def main():
             raise ValueError("Unknown type")
 
         if field.mapping is None:
-            print(f'{field.label}:  {value}')
+            print('%s:  %s' % ({field.label}, {value}))
         else:
             print(field.label + ':')
             for key, display in field.mapping.items():
                 x = 'x' if key == value else ' '
-                print(f'    [{x}] {display}')
+                print('    [%s] %s' % (x, display))
 
     if args.reset:
         print()
