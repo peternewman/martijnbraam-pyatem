@@ -48,6 +48,9 @@ class SwitcherPage:
         self.wipe_reverse = builder.get_object('wipe_reverse')
         self.wipe_flipflop = builder.get_object('wipe_flipflop')
 
+        self.dve_reverse = builder.get_object('dve_reverse')
+        self.dve_flipflop = builder.get_object('dve_flipflop')
+
         self.ftb_afv = builder.get_object('ftb_afv')
 
         self.keyer_stack = builder.get_object('keyer_stack')
@@ -145,6 +148,24 @@ class SwitcherPage:
         for style, button in enumerate(self.wipe_style):
             button.pattern = style
             button.connect('pressed', self.on_wipe_pattern_clicked)
+
+        directions = ['tl', 't', 'tr', 'l', 'r', 'bl', 'b', 'br']
+        self.dve_style_push = []
+        self.dve_style_squeeze = []
+        for stylecode, direction in enumerate(directions):
+            btn = builder.get_object(f'dt_push_{direction}')
+            btn.style = 'push'
+            btn.direction = direction
+            btn.styleindex = stylecode + 24
+            btn.connect('pressed', self.on_dve_transition_style_clicked)
+            self.dve_style_push.append(btn)
+
+            btn = builder.get_object(f'dt_squeeze_{direction}')
+            btn.style = 'squeeze'
+            btn.direction = direction
+            btn.styleindex = stylecode + 16
+            btn.connect('pressed', self.on_dve_transition_style_clicked)
+            self.dve_style_squeeze.append(btn)
 
         self.color1 = builder.get_object('color1')
         self.color2 = builder.get_object('color2')
@@ -244,6 +265,27 @@ class SwitcherPage:
         if self.model_changing:
             return
         cmd = WipeSettingsCommand(index=0, pattern=widget.pattern)
+        self.connection.mixer.send_commands([cmd])
+
+    def on_dve_transition_style_clicked(self, widget):
+        if self.model_changing:
+            return
+
+        cmd = DveSettingsCommand(index=0, style=widget.styleindex)
+        self.connection.mixer.send_commands([cmd])
+
+    def on_dve_reverse_clicked(self, widget):
+        if self.model_changing:
+            return
+        state = widget.get_style_context().has_class('active')
+        cmd = DveSettingsCommand(index=0, reverse=not state)
+        self.connection.mixer.send_commands([cmd])
+
+    def on_dve_flipflop_clicked(self, widget):
+        if self.model_changing:
+            return
+        state = widget.get_style_context().has_class('active')
+        cmd = DveSettingsCommand(index=0, flipflop=not state)
         self.connection.mixer.send_commands([cmd])
 
     def on_tbar_position_changed(self, widget, index, position):
@@ -466,6 +508,13 @@ class SwitcherPage:
             self.log_sw.warning("Got transition dve change for non-existing M/E {}".format(data.index + 1))
             return
 
+        for button in self.dve_style_push + self.dve_style_squeeze:
+            self.set_class(button, 'stylebtn', True)
+            self.set_class(button, 'active', data.style == button.styleindex)
+
+        self.set_class(self.dve_reverse, 'active', data.reverse)
+        self.set_class(self.dve_flipflop, 'active', data.flipflop)
+
         label = self.frames_to_time(data.rate)
         self.dve_rate.set_text(label)
         self.me[data.index].set_auto_rate('dve', data.rate)
@@ -491,6 +540,35 @@ class SwitcherPage:
         region = self.layout[0].get(LayoutView.LAYER_DSK, data.index)
         region.set_tally(data.on_air)
 
+    def make_preset_expander(self, label, context, widget):
+        overlay = Gtk.Overlay()
+        expander = Gtk.Expander()
+        expander.get_style_context().add_class('bmdgroup')
+        frame_label = Gtk.Label(label)
+        frame_label.get_style_context().add_class("heading")
+        expander.set_label_widget(frame_label)
+        expander.set_expanded(True)
+        expander.add(widget)
+        overlay.add(expander)
+
+        button = Gtk.MenuButton()
+        button.set_valign(Gtk.Align.START)
+        button.set_halign(Gtk.Align.END)
+        self.set_class(button, 'flat', True)
+        self.set_class(button, 'preset', True)
+        self.apply_css(button, self.provider)
+        overlay.add_overlay(button)
+
+        hamburger = Gtk.Image.new_from_icon_name('open-menu-symbolic', Gtk.IconSize.BUTTON)
+        button.set_image(hamburger)
+        button.set_name(context)
+
+        context = context.split(':')
+        button.set_menu_model(self.preset_models[context[0]])
+
+        button.connect("clicked", self.on_presets_clicked)
+        return overlay
+
     def on_topology_change(self, data: TopologyField):
         # Create the M/E units
         for i in range(0, data.me_units - len(self.me)):
@@ -505,14 +583,10 @@ class SwitcherPage:
             self.downstream_keyers.remove(widget)
 
         for i in range(0, data.downstream_keyers):
-            exp = Gtk.Expander()
-            exp.get_style_context().add_class('bmdgroup')
             label = _("Downstream keyer {}").format(i + 1)
-            frame_label = Gtk.Label(label)
-            frame_label.get_style_context().add_class("heading")
-            exp.set_label_widget(frame_label)
-            exp.set_expanded(True)
             dsk = DownstreamKeyer(index=i, connection=self.connection)
+            exp = self.make_preset_expander(label, f"dsk:{dsk.index}", dsk)
+
             self.dsks[dsk.index] = dsk
             self.has_models.append(dsk)
             exp.add(dsk)
@@ -1298,3 +1372,6 @@ class SwitcherPage:
 
     def on_fold_folded(self, widget, *args):
         self.flaptoggle.set_visible(self.flap.get_folded())
+
+    def on_presets_clicked(self, widget, *args):
+        self.preset_context = widget.get_name()
