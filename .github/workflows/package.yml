@@ -27,6 +27,7 @@ jobs:
           python-version: '3.10' 
       - name: Build pyatem deb
         run: |
+          ls -al
           setup.py build
           tar -xvf *.tar.gz
           py2dsc-deb *.tar.gz
