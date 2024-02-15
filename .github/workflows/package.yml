@@ -29,6 +29,7 @@ jobs:
         run: |
           ls -al
           python3 setup.py build
+          tree
           tar -xvf *.tar.gz
           py2dsc-deb *.tar.gz
 #      - name: Build deb
