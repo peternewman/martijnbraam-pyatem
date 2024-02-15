@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Install dependencies
-        run: sudo apt-get install tree devscripts dselect python3-stdeb
+        run: sudo apt-get install tree devscripts dselect python3-stdeb python3-build
       - name: Prepare apt
         run: sudo apt-file update
       - name: Do dselect update
@@ -28,7 +28,9 @@ jobs:
       - name: Build pyatem deb
         run: |
           ls -al
-          python3 setup.py build
+#          python3 setup.py build
+          python3 -m build --sdist
+          python3 -m build --wheel
           tree
           tar -xvf *.tar.gz
           py2dsc-deb *.tar.gz
