@@ -1,0 +1,86 @@
+name: "Package"
+on:
+  workflow_dispatch:
+  pull_request:
+    branches-ignore:
+      - gh-pages
+  push:
+    branches-ignore:
+      - gh-pages
+
+jobs:
+  package:
+    # Only package if we passed all the tests
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Install dependencies
+        run: sudo apt-get install tree devscripts dselect python3-stdeb
+      - name: Prepare apt
+        run: sudo apt-file update
+      - name: Do dselect update
+        run: sudo dselect update
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10' 
+      - name: Build pyatem deb
+        run: |
+          setup.py build
+          tar -xvf *.tar.gz
+          py2dsc-deb *.tar.gz
+#      - name: Build deb
+#        run: |
+#          fakeroot dh-make-perl --verbose make --requiredeps .
+#          # Force a .tar.gz file within the deb for maximum compatibility
+#          echo -e "\noverride_dh_builddeb:\n\tdh_builddeb -- -Zgzip" >> debian/rules
+#          # Remove perl multiarch for backwards compatibility
+#          echo -e "\nexecute_after_dh_perl:\n\tdh_perl\n\tsed -i -e 's/perl:any/perl/g' debian/*.substvars" >> debian/rules
+#          debuild -Zgzip -uc -us
+      - name: Move and validate debs
+        run: |
+          ls *.deb
+          dpkg --info python3-pyatem*.deb
+      - uses: actions/upload-artifact@v3
+        with:
+          name: debs
+          path: "*.deb"
+      - name: Release python3-pyatem on Github Pages APT repo
+        uses: peternewman/apt-repo-action@globs
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          repo_supported_arch: |
+            amd64
+            arm64
+            armhf
+            i386
+            ppc64el
+            s390x
+          repo_supported_version: main
+          file: python3-pyatem*.deb
+          file_target_version: main
+          private_key: ${{ secrets.APT_SIGNING_KEY }}
+          key_passphrase: ${{ secrets.APT_PASSPHRASE }}
+          debug: true
+
+  update-readme:
+    # Only update readme if we packaged successfully
+    needs: package
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: 'gh-pages'
+      - name: Get branch name
+        id: branch-name
+        # This doesn't update major version numbers, so we need to be specific
+        uses: tj-actions/branch-names@v5.4
+      - name: Copy To Branches Action
+        # This doesn't update major version numbers, so we need to be specific
+        uses: planetoftheweb/copy-to-branches@v1.3
+        env:
+          key: "${{ steps.branch-name.outputs.current_branch }}${{ steps.branch-name.outputs.base_ref_branch }}"
+          branches: gh-pages
+          files: README.md
