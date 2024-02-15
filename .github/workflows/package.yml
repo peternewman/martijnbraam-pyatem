@@ -28,7 +28,7 @@ jobs:
       - name: Build pyatem deb
         run: |
           ls -al
-          setup.py build
+          python3 setup.py build
           tar -xvf *.tar.gz
           py2dsc-deb *.tar.gz
 #      - name: Build deb
