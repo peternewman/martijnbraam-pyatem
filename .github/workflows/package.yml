@@ -28,12 +28,12 @@ jobs:
       - name: Build pyatem deb
         run: |
           ls -al
-#          python3 setup.py build
           python3 -m build --sdist
           python3 -m build --wheel
           tree
           tar -xvf *.tar.gz
           py2dsc-deb *.tar.gz
+#          python3 setup.py build
 #      - name: Build deb
 #        run: |
 #          fakeroot dh-make-perl --verbose make --requiredeps .
