@@ -480,3 +480,16 @@ class AtemProductionStudio4k(AtemLegacyProtocol):
         Field('netmask', (0x0024, 4), ipaddress.IPv4Address, "Network", "Netmask"),
         Field('gateway', (0x0028, 4), ipaddress.IPv4Address, "Network", "Gateway"),
     ]
+
+
+class Atem2MeProductionStudio4k(AtemLegacyProtocol):
+    PRODUCT = 0xBD87
+    NAME = "Blackmagic design ATEM 2 M/E Production Studio 4K"
+
+# TODO(Peter): Add some fields
+    FIELDS = [
+#        Field('name', (0x0048, 32), str, "Device", "Name"),
+#        Field('address', (0x0020, 4), ipaddress.IPv4Address, "Network", "Address"),
+#        Field('netmask', (0x0024, 4), ipaddress.IPv4Address, "Network", "Netmask"),
+#        Field('gateway', (0x0028, 4), ipaddress.IPv4Address, "Network", "Gateway"),
+    ]
