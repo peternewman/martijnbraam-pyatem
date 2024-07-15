@@ -5,6 +5,7 @@ import logging
 import re
 from datetime import datetime, timedelta
 
+from gtk_switcher.decorators import field
 from gtk_switcher.layout import LayoutView
 from pyatem.command import CutCommand, AutoCommand, FadeToBlackCommand, TransitionSettingsCommand, WipeSettingsCommand, \
     TransitionPositionCommand, TransitionPreviewCommand, ColorGeneratorCommand, MixSettingsCommand, DipSettingsCommand, \
@@ -12,7 +13,8 @@ from pyatem.command import CutCommand, AutoCommand, FadeToBlackCommand, Transiti
     DkeyAutoCommand, DkeyTieCommand, \
     DkeyOnairCommand, ProgramInputCommand, PreviewInputCommand, KeyOnAirCommand, KeyFillCommand, \
     FadeToBlackConfigCommand, RecorderStatusCommand, AuxSourceCommand, StreamingServiceSetCommand, \
-    RecordingSettingsSetCommand, StreamingStatusSetCommand, MediaplayerSelectCommand, StreamingAudioBitrateCommand
+    RecordingSettingsSetCommand, StreamingStatusSetCommand, MediaplayerSelectCommand, StreamingAudioBitrateCommand, \
+    MacroRecordCommand, MacroActionCommand
 from pyatem.field import TransitionSettingsField, InputPropertiesField, TopologyField
 import gtk_switcher.stream_data
 
@@ -104,6 +106,8 @@ class SwitcherPage:
         self.live_stats = builder.get_object('live_stats')
         self.stream_live_active = False
         self.stream_live_start_time = None
+
+        self.macro_name = builder.get_object('macro_name')
 
         self.flap = builder.get_object('flap')
         self.flaptoggle = builder.get_object('flaptoggle')
@@ -336,8 +340,8 @@ class SwitcherPage:
     def on_aux_source_changed(self, widget):
         if hasattr(widget, 'ignore_change') and widget.ignore_change or self.model_changing:
             return
-        cmd = AuxSourceCommand(widget.index, source=int(widget.get_active_id()))
-        self.connection.mixer.send_commands([cmd])
+
+        self.routing.change(widget.index, int(widget.get_active_id()))
 
     def on_wipe_symmetry_adj_value_changed(self, widget, *args):
         if self.model_changing:
@@ -446,12 +450,14 @@ class SwitcherPage:
         elif len(part) == 2:
             return (int(part[0]) * transition_rate) + int(part[1])
 
+    @field('fade-to-black')
     def on_ftb_change(self, data):
         if data.index > len(self.me) - 1:
             self.log_sw.warning("Got FTB change for non-existing M/E {}".format(data.index + 1))
             return
         self.me[data.index].set_ftb_rate(data.rate)
 
+    @field('transition-mix')
     def on_transition_mix_change(self, data):
         if data.index > len(self.me) - 1:
             self.log_sw.warning("Got transition mix change for non-existing M/E {}".format(data.index + 1))
@@ -461,6 +467,7 @@ class SwitcherPage:
         self.mix_rate.set_text(label)
         self.me[data.index].set_auto_rate('mix', data.rate)
 
+    @field('transition-dip')
     def on_transition_dip_change(self, data):
         if data.index > len(self.me) - 1:
             self.log_sw.warning("Got transition dip change for non-existing M/E {}".format(data.index + 1))
@@ -473,6 +480,7 @@ class SwitcherPage:
         self.dip_source.ignore_change = False
         self.me[data.index].set_auto_rate('dip', data.rate)
 
+    @field('transition-wipe')
     def on_transition_wipe_change(self, data):
         if data.index > len(self.me) - 1:
             self.log_sw.warning("Got transition wipe change for non-existing M/E {}".format(data.index + 1))
@@ -503,6 +511,7 @@ class SwitcherPage:
         self.set_class(self.wipe_reverse, 'active', data.reverse)
         self.set_class(self.wipe_flipflop, 'active', data.flipflop)
 
+    @field('transition-dve')
     def on_transition_dve_change(self, data):
         if data.index > len(self.me) - 1:
             self.log_sw.warning("Got transition dve change for non-existing M/E {}".format(data.index + 1))
@@ -522,6 +531,7 @@ class SwitcherPage:
     def _remap(self, value, old_min, old_max, new_min, new_max):
         return ((value - old_min) / (old_max - old_min)) * (new_max - new_min) + new_min
 
+    @field('dkey-properties')
     def on_dsk_change(self, data):
         self.me[0].set_dsk(data)
         if data.index in self.dsks:
@@ -535,6 +545,7 @@ class SwitcherPage:
             region = self.layout[0].get(LayoutView.LAYER_DSK, data.index)
             region.set_mask(top, bottom, left, right)
 
+    @field('dkey-state')
     def on_dsk_state_change(self, data):
         self.me[0].set_dsk_state(data)
         region = self.layout[0].get(LayoutView.LAYER_DSK, data.index)
@@ -569,6 +580,7 @@ class SwitcherPage:
         button.connect("clicked", self.on_presets_clicked)
         return overlay
 
+    @field('topology')
     def on_topology_change(self, data: TopologyField):
         # Create the M/E units
         for i in range(0, data.me_units - len(self.me)):
@@ -649,6 +661,7 @@ class SwitcherPage:
         self.media_create_mediaplayers(data.mediaplayers)
         self.switcher_mediaplayers.show_all()
 
+    @field('mediaplayer-selected')
     def on_mediaplayer_switcher_source_change(self, data):
         if data.index not in self.mediaplayer_dropdowns:
             return
@@ -685,6 +698,7 @@ class SwitcherPage:
         cmd = DkeyAutoCommand(index=dsk)
         self.connection.mixer.send_commands([cmd])
 
+    @field('mixer-effect-config')
     def on_mixer_effect_config_change(self, data):
         if data.index > len(self.me) - 1:
             self.log_sw.warning("Got _MeC for non-existing M/E {}".format(data.index + 1))
@@ -722,6 +736,7 @@ class SwitcherPage:
 
             self.upstream_keyers.show_all()
 
+    @field('fade-to-black-state')
     def on_ftb_state_change(self, data):
         if data.index > len(self.me) - 1:
             self.log_sw.warning("Got FTB state change for non-existing M/E {}".format(data.index + 1))
@@ -729,6 +744,7 @@ class SwitcherPage:
 
         self.me[data.index].set_ftb_state(data.done, data.transitioning)
 
+    @field('color-generator')
     def on_color_change(self, data):
         r, g, b = data.get_rgb()
         color = Gdk.RGBA()
@@ -742,6 +758,7 @@ class SwitcherPage:
         else:
             self.color2.set_rgba(color)
 
+    @field('key-on-air')
     def on_key_on_air_change(self, data):
         if data.index > len(self.me) - 1:
             self.log_sw.warning("Got key-on-air for non-existant keyer {} M/E {}".format(data.keyer, data.index + 1))
@@ -749,18 +766,21 @@ class SwitcherPage:
         self.me[data.index].set_key_on_air(data)
         self.layout[data.index].get(LayoutView.LAYER_USK, data.keyer).set_tally(data.enabled)
 
+    @field('transition-preview')
     def on_transition_preview_change(self, data):
         if data.index > len(self.me) - 1:
             self.log_sw.warning("Got transition preview change for non-existing M/E {}".format(data.index + 1))
             return
         self.me[data.index].set_preview_transition(data.enabled)
 
+    @field('transition-settings')
     def on_transition_settings_change(self, data):
         if data.index > len(self.me) - 1:
             self.log_sw.warning("Got transition settings change for non-existing M/E {}".format(data.index + 1))
             return
         self.me[data.index].set_transition_settings(data)
 
+    @field('transition-position')
     def on_transition_position_change(self, data):
         if data.index > len(self.me) - 1:
             self.log_sw.warning("Got transition position change for non-existing M/E {}".format(data.index + 1))
@@ -771,6 +791,7 @@ class SwitcherPage:
         cmd = KeyOnAirCommand(index=index, keyer=keyer, enabled=enabled)
         self.connection.mixer.send_commands([cmd])
 
+    @field('key-properties-base')
     def on_key_properties_base_change(self, data):
         if data.index not in self.usks:
             self.log_sw.warning(
@@ -782,6 +803,7 @@ class SwitcherPage:
             return
         self.usks[data.index][data.keyer].on_key_properties_base_change(data)
 
+    @field('key-properties-luma')
     def on_key_properties_luma_change(self, data):
         if data.index not in self.usks:
             self.log_sw.warning(
@@ -793,6 +815,7 @@ class SwitcherPage:
             return
         self.usks[data.index][data.keyer].on_key_properties_luma_change(data)
 
+    @field('key-properties-dve')
     def on_key_properties_dve_change(self, data):
         if data.index not in self.usks:
             self.log_sw.warning(
@@ -811,6 +834,7 @@ class SwitcherPage:
         region.set_region(data.pos_x / 1000, data.pos_y / 1000, width, height)
         region.set_mask(data.mask_top, data.mask_bottom, data.mask_left, data.mask_right)
 
+    @field('key-properties-advanced-chroma')
     def on_key_properties_advanced_chroma_change(self, data):
         if data.index not in self.usks:
             self.log_sw.warning(
@@ -822,6 +846,7 @@ class SwitcherPage:
             return
         self.usks[data.index][data.keyer].on_advanced_chroma_change(data)
 
+    @field('key-properties-advanced-chroma-colorpicker')
     def on_key_properties_advanced_chroma_colorpicker_change(self, data):
         if data.index not in self.usks:
             self.log_sw.warning(
@@ -841,18 +866,21 @@ class SwitcherPage:
         region.set_tally(data.preview)
         region.set_visible(data.cursor)
 
+    @field('program-bus-input')
     def on_program_input_change(self, data):
         if data.index > len(self.me) - 1:
             self.log_sw.warning("Got program input change for non-existing M/E {}".format(data.index + 1))
             return
         self.me[data.index].program_input_change(data)
 
+    @field('preview-bus-input')
     def on_preview_input_change(self, data):
         if data.index > len(self.me) - 1:
             self.log_sw.warning("Got preview input change for non-existing M/E {}".format(data.index + 1))
             return
         self.me[data.index].preview_input_change(data)
 
+    @field('dkey-properties-base')
     def on_dkey_properties_base_change(self, data):
         if data.index not in self.dsks:
             self.log_sw.warning("Got dkey-properties-base for non-existant keyer {}".format(data.index))
@@ -867,6 +895,7 @@ class SwitcherPage:
         cmd = PreviewInputCommand(index=index, source=source)
         self.connection.mixer.send_commands([cmd])
 
+    @field('recording-settings')
     def on_stream_recording_setting_change(self, data):
         self.expander_stream_recorder.show()
         self.model_changing = True
@@ -878,6 +907,7 @@ class SwitcherPage:
         self.on_update_recording_buttons()
         self.model_changing = False
 
+    @field('recording-disk')
     def on_stream_recording_disks_change(self, data):
         self.model_changing = True
         if data.is_deleted:
@@ -898,6 +928,7 @@ class SwitcherPage:
         self.on_update_recording_buttons()
         self.model_changing = False
 
+    @field('recording-status')
     def on_stream_recording_status_change(self, data):
         self.on_update_recording_buttons()
 
@@ -925,6 +956,7 @@ class SwitcherPage:
         self.set_class(self.stream_recorder_status, 'program', active)
         self.set_class(self.stream_recorder_clock, 'program', active)
 
+    @field('recording-duration')
     def on_stream_recording_duration_change(self, data):
         # This does not get called nearly often enough
         self.stream_recorder_clock.set_text(f'{data.hours}:{data.minutes}:{data.seconds}')
@@ -976,17 +1008,19 @@ class SwitcherPage:
         self.connection.mixer.send_commands([cmd])
 
     def on_aux_output_source_change(self, source):
-        if source.index not in self.aux:
+        self.routing.aux_changed(source)
+        aux = self.routing.aux_index_to_port_index(source.index)
+        if aux not in self.aux:
             return
 
-        self.aux[source.index].ignore_change = True
-        self.aux[source.index].set_active_id(str(source.source))
-        self.aux[source.index].ignore_change = False
+        self.aux[aux].ignore_change = True
+        self.aux[aux].set_active_id(str(source.source))
+        self.aux[aux].ignore_change = False
 
         for me in self.me:
             if not hasattr(me, 'category'):
                 continue
-            if me.index == source.index:
+            if me.index == aux:
                 me.source_change(source.source)
 
     def on_input_layout_change(self, changed_input):
@@ -1040,8 +1074,10 @@ class SwitcherPage:
                 self.model_aux.append([str(i.index), i.name])
 
             if i.port_type == InputPropertiesField.PORT_AUX_OUTPUT:
-                aux_id = i.index - 8001
+                self.routing.add_output(i)
+                aux_id = i.index
                 if aux_id not in self.aux:
+                    # Create AUX combobox in palette
                     self.aux[aux_id] = Gtk.ComboBox.new_with_model(self.model_aux)
                     self.aux[aux_id].set_entry_text_column(1)
                     self.aux[aux_id].set_id_column(0)
@@ -1052,6 +1088,7 @@ class SwitcherPage:
                     self.aux[aux_id].add_attribute(renderer, "text", 1)
                     self.grid_aux.attach(self.aux[aux_id], 1, aux_id, 1, 1)
 
+                    # Create options dropdown after the combobox
                     aux_me = Gtk.CheckButton.new_with_label(_("Show as bus"))
                     aux_me.index = i.index
                     aux_me.connect('toggled', self.on_aux_me_enable_toggled)
@@ -1121,7 +1158,9 @@ class SwitcherPage:
         if widget.get_active():
             inputs = self.connection.mixer.mixerstate['input-properties']
             auxsrcs = self.connection.mixer.mixerstate['aux-output-source']
-            auxsrc = auxsrcs[widget.index - 8001]
+            webcam = widget.index == 8200
+            aux = self.routing.port_index_to_aux_index(widget.index)
+            auxsrc = auxsrcs[aux]
             external = []
             output = []
             passthrough = []
@@ -1129,7 +1168,7 @@ class SwitcherPage:
             black = []
             bars = []
             for i in inputs.values():
-                if i.available_aux:
+                if i.available_aux and not webcam or webcam and i.available_usb:
                     if i.port_type == InputPropertiesField.PORT_EXTERNAL:
                         external.append(i)
                     elif i.port_type == InputPropertiesField.PORT_ME_OUTPUT:
@@ -1163,7 +1202,7 @@ class SwitcherPage:
             aux_me.set_inputs([row1, row2])
             aux_me.source_change(auxsrc.source)
             aux_me.connect('source-changed', self.on_aux_me_source_changed)
-            aux_me.index = widget.index - 8001
+            aux_me.index = widget.index
             aux_me.category = 'aux'
             self.apply_css(aux_me, self.provider)
             self.me.append(aux_me)
@@ -1174,14 +1213,14 @@ class SwitcherPage:
                     continue
                 if me.category != 'aux':
                     continue
-                if me.index == widget.index - 8001:
+                if me.index == widget.index:
                     self.me.remove(me)
                     me.destroy()
 
     def on_aux_me_source_changed(self, widget, aux, source):
-        cmd = AuxSourceCommand(aux, source=source)
-        self.connection.mixer.send_commands([cmd])
+        self.routing.change(aux, source)
 
+    @field('macro-properties')
     def on_macro_properties_change(self, data):
         # Clear the macro flow container
         for widget in self.macro_flow:
@@ -1200,23 +1239,71 @@ class SwitcherPage:
                 self.macro_flow.add(button)
         self.macro_flow.show_all()
 
+    def on_macro_run(self, widget):
+        index = widget.index
+        cmd = MacroActionCommand(MacroActionCommand.ACTION_RUN, index=index)
+        self.connection.mixer.send_commands([cmd])
+
+    def on_macro_delete(self, widget):
+        index = widget.index
+        cmd = MacroActionCommand(MacroActionCommand.ACTION_DELETE, index=index)
+        self.connection.mixer.send_commands([cmd])
+
     def on_macro_context(self, widget, event, *args):
+        if event.button == 1:
+            self.on_macro_run(widget)
+
         if event.button != 3:
             return
 
         self.menu = Gtk.Menu()
+
         run_item = Gtk.MenuItem(_("Run macro"))
+        run_item.index = widget.index
+        run_item.connect('activate', self.on_macro_run)
         self.menu.append(run_item)
+
         edit_item = Gtk.MenuItem(_("Edit macro"))
         edit_item.index = widget.index
         edit_item.connect('activate', self.on_macro_edit)
         self.menu.append(edit_item)
+
+        edit_item = Gtk.MenuItem(_("Delete macro"))
+        edit_item.index = widget.index
+        edit_item.connect('activate', self.on_macro_delete)
+        self.menu.append(edit_item)
+
         self.menu.show_all()
         self.menu.popup(None, None, None, None, 0, Gtk.get_current_event_time())
 
     def on_macro_edit(self, widget):
         self.macro_edit = True
         self.connection.mixer.download(0xffff, widget.index)
+
+    def on_macro_create_clicked(self, widget):
+        name = self.macro_name.get_text()
+        if name.strip() == '':
+            return
+
+        # Find a free macro slot for recording
+        slot_index = 0
+        for slot in self.connection.mixer.mixerstate['macro-properties']:
+            mp = self.connection.mixer.mixerstate['macro-properties'][slot]
+            if not mp.is_used:
+                slot_index = slot
+                break
+        else:
+            self.log_sw.error("Could not find a free macro slot to record in")
+            return
+
+        self.log_sw.info(f'Creating macro "{name}" in slot {slot_index}')
+
+        cmd = MacroRecordCommand(slot_index, name, '')
+        self.connection.mixer.send_commands([cmd])
+
+    def on_macro_status_stop_clicked(self, widget):
+        cmd = MacroActionCommand(MacroActionCommand.ACTION_STOP_RECORD)
+        self.connection.mixer.send_commands([cmd])
 
     def bps_to_human(self, bps):
         if bps < 1000:
@@ -1228,6 +1315,7 @@ class SwitcherPage:
             val = bps / 1000 / 1000
             return f'{val:g}M'
 
+    @field('streaming-service')
     def on_streaming_service_change(self, data):
         self.expander_livestream.show()
         self.expander_encoder.show()
@@ -1238,11 +1326,13 @@ class SwitcherPage:
         self.stream_live_server.set_text(data.url)
         self.stream_live_key.set_text(data.key)
 
+    @field('streaming-audio-bitrate')
     def on_streaming_audio_bitrate_change(self, data):
         self.expander_encoder.show()
         self.audio_rate_min.set_text(self.bps_to_human(data.min))
         self.audio_rate_max.set_text(self.bps_to_human(data.max))
 
+    @field('streaming-status')
     def on_streaming_status_change(self, data):
         starting = data.status == 2
         active = data.status == 4
@@ -1273,6 +1363,7 @@ class SwitcherPage:
 
         self.stream_live_active = active
 
+    @field('streaming-stats')
     def on_streaming_stats_change(self, data):
         self.live_stats.set_text('{:.2f} Mbps'.format(data.bitrate / 1000 / 1000))
 
@@ -1376,6 +1467,7 @@ class SwitcherPage:
     def on_presets_clicked(self, widget, *args):
         self.preset_context = widget.get_name()
 
+    @field('supersource-box-properties')
     def on_supersource_box_change(self, data):
         x = data.x / 100
         y = data.y / 100
