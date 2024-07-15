@@ -583,6 +583,7 @@ class InputPropertiesField(FieldBase):
         self.available_key_source = fields[11] & (1 << 4) != 0
         self.available_aux1 = fields[11] & (1 << 5) != 0
         self.available_aux2 = fields[11] & (1 << 6) != 0
+        self.available_usb = fields[11] & (1 << 7) != 0
 
         self.available_me1 = fields[12] & (1 << 0) != 0
         self.available_me2 = fields[12] & (1 << 1) != 0
@@ -1062,38 +1063,38 @@ class TopologyField(FieldBase):
     rs485               0         1       1
     =================== ========= ======= ======
 
-    ====== ==== ====== ========= ========= ======= ======= ====== ======= ===========
-    Offset Size Type   Atem Mini Mini Pro  1M/E 4k Prod 4k TVS HD CHD 2ME Description
-    ====== ==== ====== ========= ========= ======= ======= ====== ======= ===========
-    0      1    u8     1         1         1       1       1      2       Number of M/E units
-    1      1    u8     14        15        31      24      24     57      Sources
-    2      1    u8     1         1         2       2       2      2       Downstream keyers
-    3      1    u8     1         1         3       1       1      12      AUX busses
-    4      1    u8     0         0         0       0       4      12      MixMinus Outputs
-    5      1    u8     1         1         2       2       2      2       Media players
-    6      1    u8     0         1         1       1       1      2       Multiviewers
-    7      1    u8     0         0         1       0       1      0       rs485
-    8      1    u8     4         4         4       4       4      4       Hyperdecks
-    9      1    u8     1         1         1       0       1      1       DVE
-    10     1    u8     0         0         1       0       0      1       Stingers
-    11     1    u8     0         0         0       0       0      1       supersources
-    12     1    u8     0         0         1       1       1      0       ?
-    13     1    u8     0         0         0       0       1      2       Talkback channels
-    14     1    u8     0         0         0       0       4      20      SDI inputs ?
-    15     1    u8     1         1         0       0       0      1       Scalers on input?
-    16     1    u8     0         0         0       0       0      0       ?
-    17     1    u8     0         0         1       1       0      0       ?
-    18     1    u8     1         1         1       1       1      1       Camera Control
-    19     1    u8     0         0         1       0       1      0       ?
-    20     1    u8     0         0         1       0       1      0       ?
-    21     1    u8     0         0         1       1       1      1       Multiview routable
-    22     1    u8     1         1         0       0       0      1       Advanced chroma keyers
-    23     1    u8     1         1         0       0       0      1       Only configurable outputs
-    24     1    u8     1         1         0       0       0      0       ?
-    25     1    u8     0x20      0x2f      0x20    0       0x10   0       ?
-    26     1    u8     3         108       0       0       0      0       ?
-    27     1    u8     0xe8      0x69      0x00    0       0x0    0       ?
-    ====== ==== ====== ========= ========= ======= ======= ====== ======= ===========
+    ====== ==== ====== ========= ========= ======= ======= ====== ======= ====== ===========
+    Offset Size Type   Atem Mini Mini Pro  1M/E 4k Prod 4k TVS HD CHD 2ME TVS4K8 Description
+    ====== ==== ====== ========= ========= ======= ======= ====== ======= ====== ===========
+    0      1    u8     1         1         1       1       1      2            1 Number of M/E units
+    1      1    u8     14        15        31      24      24     57          35 Sources
+    2      1    u8     1         1         2       2       2      2            2 Downstream keyers
+    3      1    u8     1         1         3       1       1      12          10 AUX busses
+    4      1    u8     0         0         0       0       4      12          10 MixMinus Outputs
+    5      1    u8     1         1         2       2       2      2            2 Media players
+    6      1    u8     0         1         1       1       1      2            1 Multiviewers
+    7      1    u8     0         0         1       0       1      0            1 rs485
+    8      1    u8     4         4         4       4       4      4           10 Hyperdecks
+    9      1    u8     1         1         1       0       1      1            1 DVE
+    10     1    u8     0         0         1       0       0      1            1 Stingers
+    11     1    u8     0         0         0       0       0      1            1 supersources
+    12     1    u8     0         0         1       1       1      0            0 ?
+    13     1    u8     0         0         0       0       1      2            2 Talkback channels
+    14     1    u8     0         0         0       0       4      20           8 SDI inputs ?
+    15     1    u8     1         1         0       0       0      1            1 Scalers on input?
+    16     1    u8     0         0         0       0       0      0            0 ?
+    17     1    u8     0         0         1       1       0      0            0 ?
+    18     1    u8     1         1         1       1       1      1            1 Camera Control
+    19     1    u8     0         0         1       0       1      0            1 ?
+    20     1    u8     0         0         1       0       1      0            1 ?
+    21     1    u8     0         0         1       1       1      1            1 Multiview routable
+    22     1    u8     1         1         0       0       0      1            1 Advanced chroma keyers
+    23     1    u8     1         1         0       0       0      1            0 Only configurable outputs
+    24     1    u8     1         1         0       0       0      0            0 ?
+    25     1    u8     0x20      0x2f      0x20    0       0x10   0            0 ?
+    26     1    u8     3         108       0       0       0      0            0 ?
+    27     1    u8     0xe8      0x69      0x00    0       0x0    0            0 ?
+    ====== ==== ====== ========= ========= ======= ======= ====== =======        ===========
 
 
     After parsing:
@@ -2865,6 +2866,36 @@ class MacroPropertiesField(FieldBase):
                                                                      self.name)
 
 
+class MacroRecordStatusField(FieldBase):
+    """
+    Data from the `MRcS` field. This is the data for the red border displayed while recoding a macro.
+
+    ====== ==== ====== ===========
+    Offset Size Type   Description
+    ====== ==== ====== ===========
+    0      1    bool   is recording (show border)
+    2      2    u16    Macro index
+    2      2    ?      padding
+    ====== ==== ====== ===========
+
+    After parsing:
+
+    :ivar index: Macro slot index
+    :ivar is_recording: Macro is currently being recorded
+    """
+
+    CODE = "MRcS"
+
+    def __init__(self, raw):
+        self.raw = raw
+        field = struct.unpack_from('>?xH', raw, 0)
+        self.is_recording = field[0]
+        self.index = field[1]
+
+    def __repr__(self):
+        return '<macro-status: recording={} index={}>'.format(self.is_recording, self.index)
+
+
 class AudioMeterLevelsField(FieldBase):
     """
     Data from the `AMLv`. This contains the realtime audio levels for the audio mixer
@@ -3501,4 +3532,8 @@ class SupersourceBoxPropertiesField(FieldBase):
         self.mask_right = field[11]
 
     def __repr__(self):
-        return '<supersource-box-properties index={}, box={}, source={}, x={}, y={}, size={}>'.format(self.index, self.box, self.source, self.x, self.y, self.size)
+        return '<supersource-box-properties index={}, box={}, source={}, x={}, y={}, size={}>'.format(self.index,
+                                                                                                      self.box,
+                                                                                                      self.source,
+                                                                                                      self.x, self.y,
+                                                                                                      self.size)
