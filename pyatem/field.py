@@ -1094,7 +1094,7 @@ class TopologyField(FieldBase):
     25     1    u8     0x20      0x2f      0x20    0       0x10   0            0 ?
     26     1    u8     3         108       0       0       0      0            0 ?
     27     1    u8     0xe8      0x69      0x00    0       0x0    0            0 ?
-    ====== ==== ====== ========= ========= ======= ======= ====== =======        ===========
+    ====== ==== ====== ========= ========= ======= ======= ====== ======= ====== ===========
 
 
     After parsing:
@@ -1925,6 +1925,7 @@ class FairlightHeadphonesField(FieldBase):
     8      1    bool   Muted (0) / Umuted (1)
     9      1    u8     Last soloed channel (just the main part)
     10     22   ?      Unknown
+    ====== ==== ====== ===========
 
     """
 
@@ -1952,6 +1953,7 @@ class FairlightSoloField(FieldBase):
     10     12   ?      Unknown
     22     1    u8     No subchannels (0x01), split into L/R (0xff)
     23     1    u8     Soloed channel (subchannel)
+    ====== ==== ====== ===========
 
     """
 
@@ -2653,7 +2655,7 @@ class LockObtainedField(FieldBase):
 
     After parsing:
     :ivar store: Store index
-=    """
+    """
 
     CODE = "LKOB"
 
