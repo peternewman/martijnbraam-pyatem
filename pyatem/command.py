@@ -326,7 +326,7 @@ class FadeToBlackCommand(Command):
 
     def __init__(self, index):
         """
-        :param index: 0-indexed M/E number to trigger FtB on
+        :param index: 0-indexed M/E number to trigger FTB on
         """
         self.index = index
 
@@ -352,8 +352,8 @@ class FadeToBlackConfigCommand(Command):
 
     def __init__(self, index, frames):
         """
-        :param index: 0-indexed M/E number to configure
-        :param index: Number of frames in the FTB transition
+        :param index: 0-indexed M/E number to configure FTB for
+        :param frame: Number of frames in the FTB transition
         """
         self.index = index
         self.frames = frames
@@ -436,7 +436,7 @@ class DkeyOnairCommand(Command):
     ====== ==== ====== ===========
     Offset Size Type   Description
     ====== ==== ====== ===========
-    0      1    u8     Keyer index, 0-indexed
+    0      1    u8     Downstream keyer index
     1      1    ?      On air
     2      2    ?      unknown
     ====== ==== ====== ===========
@@ -464,7 +464,7 @@ class DkeyTieCommand(Command):
     ====== ==== ====== ===========
     Offset Size Type   Description
     ====== ==== ====== ===========
-    0      1    u8     Keyer index, 0-indexed
+    0      1    u8     Downstream keyer index
     1      1    ?      Tie
     2      2    ?      unknown
     ====== ==== ====== ===========
@@ -492,7 +492,7 @@ class DkeyAutoCommand(Command):
     ====== ==== ====== ===========
     Offset Size Type   Description
     ====== ==== ====== ===========
-    0      1    u8     Keyer index, 0-indexed
+    0      1    u8     Downstream keyer index
     1      3    ?      unknown
     ====== ==== ====== ===========
 
@@ -517,7 +517,7 @@ class DkeyRateCommand(Command):
     ====== ==== ====== ===========
     Offset Size Type   Description
     ====== ==== ====== ===========
-    0      1    u8     Keyer index, 0-indexed
+    0      1    u8     Downstream keyer index
     1      1    u8     Rate in frames
     2      2    ?      unknown
     ====== ==== ====== ===========
@@ -527,7 +527,7 @@ class DkeyRateCommand(Command):
     def __init__(self, index, rate):
         """
         :param index: 0-indexed DSK number to change
-        :param rate: New rate for the keyer
+        :param rate: New rate in frames for the keyer
         """
         self.index = index
         self.rate = rate
@@ -545,7 +545,7 @@ class DkeySetFillCommand(Command):
     ====== ==== ====== ===========
     Offset Size Type   Description
     ====== ==== ====== ===========
-    0      1    u8     Keyer index, 0-indexed
+    0      1    u8     Downstream keyer index
     1      1    ?      unknown
     2      2    u16    Fill source index
     ====== ==== ====== ===========
@@ -573,7 +573,7 @@ class DkeySetKeyCommand(Command):
     ====== ==== ====== ===========
     Offset Size Type   Description
     ====== ==== ====== ===========
-    0      1    u8     Keyer index, 0-indexed
+    0      1    u8     Downstream keyer index
     1      1    ?      unknown
     2      2    u16    Key source index
     ====== ==== ====== ===========
@@ -739,7 +739,7 @@ class MixSettingsCommand(Command):
 
     def __init__(self, index, rate):
         """
-        :param index: 0-indexed DSK number to trigger
+        :param index: 0-indexed M/E number to set the transition duration for
         :param rate: Transition length in frames
         """
         self.index = index
@@ -834,7 +834,7 @@ class WipeSettingsCommand(Command):
     def __init__(self, index, rate=None, pattern=None, width=None, source=None, symmetry=None, softness=None,
                  positionx=None, positiony=None, reverse=None, flipflop=None):
         """
-        :param index: 0-indexed M/E number to control the preview bus of
+        :param index: 0-indexed M/E number to change the wipe settings for
         :param rate: Set new transition rate, or None
         :param pattern: Set transition pattern id, or None
         :param width: Set transition border width, or None
@@ -943,7 +943,7 @@ class DveSettingsCommand(Command):
     def __init__(self, index, rate=None, style=None, fill_source=None, key_source=None, key_enable=None,
                  key_premultiplied=None, key_clip=None, key_gain=None, key_invert=None, reverse=None, flipflop=None):
         """
-        :param index: 0-indexed M/E number to control the preview bus of
+        :param index: 0-indexed M/E number to change the DVE settings for
         :param rate: Set new transition rate, or None
         :param style: Set new transition style, or None
         :param fill_source: Set new fill source, or None
@@ -1090,8 +1090,13 @@ class AudioMonitorPropertiesCommand(Command):
 
     def __init__(self, enabled=None, volume=None, mute=None, solo=None, solo_source=None, dim=None, dim_volume=None):
         """
+        :param enabled:
         :param volume: New volume of the master channel, or None
-        :param afv: Enable AFV for master, following the Fade-to-black, or None
+        :param mute:
+        :param solo:
+        :param solo_source:
+        :param dim:
+        :param dim_volume:
         """
         self.enabled = enabled
         self.volume = volume
@@ -1165,7 +1170,11 @@ class AudioInputCommand(Command):
 
     def __init__(self, source, balance=None, volume=None, on=None, afv=None):
         """
-        :param index: 0-indexed M/E number to control the preview bus of
+        :param source:
+        :param balance:
+        :param volume:
+        :param on:
+        :param afv:
         """
         self.source = source
         self.balance = balance
@@ -1230,10 +1239,10 @@ class FairlightMasterPropertiesCommand(Command):
     def __init__(self, eq_gain=None, dynamics_gain=None, volume=None, afv=None, eq_enable=None):
         """
         :param eq_gain: Make-up gain for the master EQ dialog
-        :param eq_enable: Enable the EQ on the master bus
         :param dynamics_gain: Make-up gain for the master Dynamics dialog
         :param volume: Master volume fader value
         :param afv: Make the master volume follow the fade-to-black function
+        :param eq_enable: Enable the EQ on the master bus
         """
 
         self.eq_gain = eq_gain
@@ -1370,6 +1379,97 @@ class FairlightStripPropertiesCommand(Command):
         return self._make_command('CFSP', data)
 
 
+class FairlightEqBandPropertiesCommand(Command):
+    """
+    Implementation of the `CEBP` command. This sets the settings of a single EQ band in the fairlight audio mixer.
+
+    ====== ==== ====== ===========
+    Offset Size Type   Description
+    ====== ==== ====== ===========
+    0      1    u8     Mask, see table below
+    1      1    ?      padding
+    2      2    u16    Source index
+    15     1    u8     Channel number
+    16     1    u8     EQ band index [0-5]
+    17     1    bool   Band enabled
+    18     1    u8     Band filter type
+    19     1    u8     Band frequency range
+    20     4    u32    Band frequency [30-21700]
+    24     4    i32    Band gain [-2000-2000]
+    28     2    i16    Band Q [30-1030]
+    30     2    ?      padding
+    ====== ==== ====== ===========
+
+    === ==========
+    Bit Mask value
+    === ==========
+    0   Delay
+    1   Gain
+    2   ?
+    3   EQ Enable
+    4   EQ Gain
+    5   Dynamics gain
+    6   Balance
+    7   Volume
+    8   State
+    === ==========
+
+    """
+
+    def __init__(self, source, channel, band, enabled=None, band_filter=None, band_range=None, frequency=None,
+                 gain=None, q=None):
+        """
+        :param source: The source index
+        :param channel: The channel index inside the source, -1 for the normal stereo channels and 0 and 1 for split
+        :param band:
+        :param enabled:
+        :param band_filter:
+        :param band_range:
+        :param frequency:
+        :param gain:
+        :param q:
+        """
+        self.source = source
+        self.channel = channel
+        self.band = band
+        self.enabled = enabled
+        self.filter = band_filter
+        self.range = band_range
+        self.frequency = frequency
+        self.gain = gain
+        self.q = q
+
+    def get_command(self):
+        mask = 0
+        if self.enabled is not None:
+            mask |= 1 << 0
+        if self.filter is not None:
+            mask |= 1 << 1
+        if self.range is not None:
+            mask |= 1 << 2
+        if self.frequency is not None:
+            mask |= 1 << 3
+        if self.gain is not None:
+            mask |= 1 << 4
+        if self.q is not None:
+            mask |= 1 << 5
+
+        enabled = 0 if self.enabled is None else self.enabled
+        filter = 0 if self.filter is None else self.filter
+        range = 0 if self.range is None else self.range
+        frequency = 0 if self.frequency is None else self.frequency
+        gain = 0 if self.gain is None else self.gain
+        q = 0 if self.q is None else self.q
+
+        split = 0xff if self.channel > -1 else 0x01
+        self.channel = 0x00 if self.channel == -1 else self.channel
+        pad = b'\xff\xff\xff\xff\xff\xff\xff'
+        data = struct.pack('>Bx H4x6sBb B?BB I i h2x', mask, self.source, pad, split,
+                           self.channel, self.band,
+                           enabled, filter, range, frequency, gain, q)
+        return self._make_command('CEBP', data)
+
+
 class KeyOnAirCommand(Command):
     """
     Implementation of the `CKOn` command. This enables an upstream keyer without having a transition.
@@ -1387,7 +1487,7 @@ class KeyOnAirCommand(Command):
 
     def __init__(self, index, keyer, enabled):
         """
-        :param index: 0-indexed DSK number to trigger
+        :param index: 0-indexed M/E number
         :param keyer: 0-indexed keyer number
         :param enabled: Set the keyer on-air or disabled
         """
@@ -1416,7 +1516,7 @@ class KeyFillCommand(Command):
 
     def __init__(self, index, keyer, source):
         """
-        :param index: 0-indexed DSK number to trigger
+        :param index: 0-indexed M/E number
         :param keyer: 0-indexed keyer number
         :param source: Source index for the keyer fill
         """
@@ -1445,7 +1545,7 @@ class KeyCutCommand(Command):
 
     def __init__(self, index, keyer, source):
         """
-        :param index: 0-indexed DSK number to trigger
+        :param index: 0-indexed M/E number
         :param keyer: 0-indexed keyer number
         :param source: Source index for the keyer fill
         """
@@ -1489,9 +1589,10 @@ class KeyTypeCommand(Command):
 
     def __init__(self, index, keyer, type=None, fly_enabled=None):
         """
-        :param index: 0-indexed DSK number to trigger
+        :param index: 0-indexed M/E number
         :param keyer: 0-indexed keyer number
-        :param source: Source index for the keyer fill
+        :param type:
+        :param fly-enabled:
         """
         self.index = index
         self.keyer = keyer
@@ -1594,7 +1695,34 @@ class KeyPropertiesDveCommand(Command):
                  altitude=None, mask_enabled=None, mask_top=None, mask_bottom=None, mask_left=None, mask_right=None,
                  rate=None):
         """
-        :param index: 0-indexed M/E number to control the preview bus of
+        :param index: 0-indexed M/E number
+        :param keyer: 0-indexed keyer number
+        :param size_x:
+        :param size_y:
+        :param pos_x:
+        :param size_y:
+        :param rotation:
+        :param border_enabled:
+        :param shadow_enabled:
+        :param border_bevel_enabled:
+        :param outer_width:
+        :param inner_width:
+        :param outer_softness:
+        :param inner_softness:
+        :param bevel_softness:
+        :param bevel_position:
+        :param order_opacity:
+        :param border_hue:
+        :param border_saturation:
+        :param border_luma:
+        :param angle:
+        :param altitude:
+        :param mask_enabled:
+        :param mask_top:
+        :param mask_bottom:
+        :param mask_left:
+        :param mask_right:
+        :param rate:
         """
         self.index = index
         self.keyer = keyer
@@ -1790,7 +1918,16 @@ class KeyPropertiesAdvancedChromaColorpickerCommand(Command):
 
     def __init__(self, index, keyer, cursor=None, preview=None, x=None, y=None, size=None, Y=None, Cb=None, Cr=None):
         """
-        :param index: 0-indexed M/E number to control the preview bus of
+        :param index: 0-indexed M/E number
+        :param keyer: 0-indexed keyer number
+        :param cursor:
+        :param preview:
+        :param x:
+        :param y:
+        :param size:
+        :param Y:
+        :param Cb:
+        :param Cr:
         """
         self.index = index
         self.keyer = keyer
@@ -1884,7 +2021,19 @@ class KeyPropertiesAdvancedChromaCommand(Command):
     def __init__(self, index, keyer, foreground=None, background=None, key_edge=None, spill=None, flare=None,
                  brightness=None, contrast=None, saturation=None, red=None, green=None, blue=None):
         """
-        :param index: 0-indexed M/E number to control the preview bus of
+        :param index: 0-indexed M/E number
+        :param keyer: 0-indexed keyer number
+        :param foreground:
+        :param background:
+        :param key_edge:
+        :param spill:
+        :param flare:
+        :param brightne:
+        :param contrast:
+        :param saturation:
+        :param red:
+        :param green:
+        :param blue:
         """
         self.index = index
         self.keyer = keyer
@@ -1974,9 +2123,12 @@ class KeyPropertiesLumaCommand(Command):
 
     def __init__(self, index, keyer, premultiplied=None, clip=None, gain=None, invert_key=None):
         """
-        :param index: 0-indexed DSK number to trigger
+        :param index: 0-indexed M/E number
         :param keyer: 0-indexed keyer number
-        :param source: Source index for the keyer fill
+        :param premultiplied:
+        :param clip:
+        :param gain:
+        :param invert_key:
         """
         self.index = index
         self.keyer = keyer
@@ -2022,7 +2174,7 @@ class KeyerKeyframeSetCommand(Command):
 
     def __init__(self, index, keyer, keyframe):
         """
-        :param index: M/E index
+        :param index: 0-indexed M/E number
         :param keyer: 0-indexed keyer number
         :param keyframe: wether to store the A or B frame, set to 'A' or 'B'
         """
@@ -2056,9 +2208,10 @@ class KeyerKeyframeRunCommand(Command):
 
     def __init__(self, index, keyer, run_to=None, set_infinite=None):
         """
-        :param index: M/E index
+        :param index: 0-indexed M/E number
         :param keyer: 0-indexed keyer number
-        :param slot: wether to store the A or B frame, set to 'A' or 'B'
+        :param run_to:
+        :param set_infinite:
         """
         self.index = index
         self.keyer = keyer
@@ -2098,7 +2251,7 @@ class RecorderStatusCommand(Command):
 
     def __init__(self, recording):
         """
-        :param recording: Wether the hardware should be recording
+        :param recording: Whether the hardware should be recording
         """
         self.recording = recording
 
@@ -2467,6 +2620,8 @@ class TransferUploadRequestCommand(Command):
         :param transfer: Unique transfer number
         :param store: Store index
         :param slot: Slot index
+        :param length:
+        :param mode:
         """
         self.transfer = transfer
         self.store = store
@@ -2526,9 +2681,9 @@ class TransferFileDataCommand(Command):
     def __init__(self, transfer, hash, name=None, description=None):
         """
         :param transfer: Unique transfer number
+        :param hash: Data MD5 hash
         :param name: Filename
         :param description: File description
-        :param hash: Data MD5 hash
         """
         self.transfer = transfer
         self.name = name
@@ -2584,8 +2739,7 @@ class SendAudioLevelsCommand(Command):
 
     def __init__(self, enable):
         """
-        :param transfer: Unique transfer number
-        :param slot: Slot index
+        :param enable:
         """
         self.enable = enable
 
@@ -2795,8 +2949,8 @@ class InputPropertiesCommand(Command):
 
 class TimeRequestCommand(Command):
     """
-    Request the system time of the hardware, this is also used as a NOP command
-    This command has no arguments
+    Request the system time of the hardware, this is also used as a NOP command.
+    This command has no arguments.
     """
 
     def get_command(self):
@@ -2894,6 +3048,17 @@ class SupersourceBoxPropertiesCommand(Command):
                  left=None, right=None):
         """
         :param index: 0-indexed M/E number to control the preview bus of
+        :param box:
+        :param enabled:
+        :param source:
+        :param x:
+        :param y:
+        :param size:
+        :param masked:
+        :param top:
+        :param bottom:
+        :param left:
+        :param right:
         """
         self.index = index
         self.box = box
@@ -2946,3 +3111,74 @@ class SupersourceBoxPropertiesCommand(Command):
                            bottom, left, right)
 
         return self._make_command('CSBP', data)
+
+
+class MacroRecordCommand(Command):
+    """
+    Implementation of the `MSRc` command. This triggers recording of a macro.
+
+    ====== ==== ====== ===========
+    Offset Size Type   Description
+    ====== ==== ====== ===========
+    0      2    u16    Macro index
+    2      2    u16    Name length
+    4      2    u16    Description length
+    6      ?    char[] Name
+    ?      ?    char[] Description
+    ====== ==== ====== ===========
+
+    """
+
+    def __init__(self, index, name, description):
+        """
+        :param index:
+        :param name:
+        :param description:
+        """
+        self.index = index
+        self.name = name
+        self.description = description
+
+    def get_command(self):
+        data = struct.pack('>HHH', self.index, len(self.name), len(self.description))
+        data += self.name.encode('ascii')
+        data += self.description.encode('ascii')
+
+        alignment = len(data) % 4
+        if alignment != 0:
+            padding = 4 - alignment
+            data += b'\0' * padding
+        return self._make_command('MSRc', data)
+
+
+class MacroActionCommand(Command):
+    """
+    Implementation of the `MAct` command. This performs special actions while recording a macro.
+
+    ====== ==== ====== ===========
+    Offset Size Type   Description
+    ====== ==== ====== ===========
+    0      2    u16    Macro index
+    2      1    u8     Action
+    3      1    ?      padding
+    ====== ==== ====== ===========
+
+    """
+    ACTION_RUN = 0
+    ACTION_STOP = 1
+    ACTION_STOP_RECORD = 2
+    ACTION_INSERT_USER_WAIT = 3
+    ACTION_CONTINUE = 4
+    ACTION_DELETE = 5
+
+    def __init__(self, action, index=None):
+        """
+        :param action:
+        :param index:
+        """
+        self.index = index if index is not None else 0xFFFF
+        self.action = action
+
+    def get_command(self):
+        data = struct.pack('>HBx', self.index, self.action)
+        return self._make_command('MAct', data)

@@ -15,6 +15,7 @@ import gi
 
 from gtk_switcher.debugger import DebuggerWindow
 from gtk_switcher.presetwindow import PresetWindow
+from gtk_switcher.routing import Routing
 from gtk_switcher.videohubconnection import VideoHubConnection
 from pyatem.hexdump import hexdump
 
@@ -163,6 +164,8 @@ class AtemWindow(SwitcherPage, MediaPage, AudioPage, CameraPage):
         self.window = builder.get_object("main_window")
         self.window.set_application(self.application)
         self.headerbar = builder.get_object("headerbar")
+        self.header_context_stack = builder.get_object("header_context_stack")
+        self.macro_status_index = builder.get_object("macro_status_index")
 
         # Load requested view
         self.mainstack = builder.get_object("mainstack")
@@ -202,6 +205,7 @@ class AtemWindow(SwitcherPage, MediaPage, AudioPage, CameraPage):
         self.connection = AtemConnection(self.on_change, self.on_disconnect, self.on_transfer_progress,
                                          self.on_download_done, self.on_connect, self.on_upload_done,
                                          self.on_upload_progress)
+        self.routing = Routing(self.connection)
 
         if args.ip:
             self.connection.ip = args.ip
@@ -571,10 +575,6 @@ class AtemWindow(SwitcherPage, MediaPage, AudioPage, CameraPage):
                 else:
                     self.connectionstack.set_visible_child_name("connected")
                 self.log_aw.info("Firmware: {}".format(data.version))
-            elif field == 'time':
-                self.on_time_sync(data)
-            elif field == 'time-config':
-                self.on_timecode_config_change(data)
             elif field == 'input-properties':
                 # Ignore input-properties fields in the initial connection
                 if self.inpr_latch == 0:
@@ -584,28 +584,6 @@ class AtemWindow(SwitcherPage, MediaPage, AudioPage, CameraPage):
                 else:
                     self.on_input_layout_change(data)
                     self.on_camera_layout_change(data)
-            elif field == 'program-bus-input':
-                self.on_program_input_change(data)
-            elif field == 'preview-bus-input':
-                self.on_preview_input_change(data)
-            elif field == 'transition-position':
-                self.on_transition_position_change(data)
-            elif field == 'transition-settings':
-                self.on_transition_settings_change(data)
-            elif field == 'transition-preview':
-                self.on_transition_preview_change(data)
-            elif field == 'key-on-air':
-                self.on_key_on_air_change(data)
-            elif field == 'color-generator':
-                self.on_color_change(data)
-            elif field == 'fade-to-black':
-                self.on_ftb_change(data)
-            elif field == 'fade-to-black-state':
-                self.on_ftb_state_change(data)
-            elif field == 'mixer-effect-config':
-                self.on_mixer_effect_config_change(data)
-            elif field == 'topology':
-                self.on_topology_change(data)
             elif field == 'product-name':
                 self.status_model.set_text(data.name)
                 self.log_aw.info("Mixer model: {}".format(data.name))
@@ -614,27 +592,6 @@ class AtemWindow(SwitcherPage, MediaPage, AudioPage, CameraPage):
                 for me in self.me:
                     me.set_mode(data)
                 self.status_mode.set_text(data.get_label())
-            elif field == 'dkey-properties':
-                self.on_dsk_change(data)
-            elif field == 'supersource-box-properties':
-                self.on_supersource_box_change(data)
-            elif field == 'dkey-state':
-                self.on_dsk_state_change(data)
-            elif field == 'mediaplayer-slots':
-                self.on_mediaplayer_slots_change(data)
-            elif field == 'mediaplayer-file-info':
-                self.on_mediaplayer_file_info_change(data)
-            elif field == 'mediaplayer-selected':
-                self.on_mediaplayer_switcher_source_change(data)
-                self.on_mediaplayer_media_source_change(data)
-            elif field == 'transition-mix':
-                self.on_transition_mix_change(data)
-            elif field == 'transition-dip':
-                self.on_transition_dip_change(data)
-            elif field == 'transition-wipe':
-                self.on_transition_wipe_change(data)
-            elif field == 'transition-dve':
-                self.on_transition_dve_change(data)
             elif field == 'fairlight-master-properties':
                 self.on_fairlight_master_properties_change(data)
             elif field == 'fairlight-audio-input':
@@ -653,46 +610,16 @@ class AtemWindow(SwitcherPage, MediaPage, AudioPage, CameraPage):
                 self.on_audio_mixer_master_properties_change(data)
             elif field == 'audio-mixer-monitor-properties':
                 self.on_audio_monitor_properties_change(data)
-            elif field == 'key-properties-base':
-                self.on_key_properties_base_change(data)
-            elif field == 'key-properties-luma':
-                self.on_key_properties_luma_change(data)
-            elif field == 'key-properties-dve':
-                self.on_key_properties_dve_change(data)
-            elif field == 'key-properties-advanced-chroma':
-                self.on_key_properties_advanced_chroma_change(data)
-            elif field == 'key-properties-advanced-chroma-colorpicker':
-                self.on_key_properties_advanced_chroma_colorpicker_change(data)
-            elif field == 'recording-settings':
-                self.on_stream_recording_setting_change(data)
-            elif field == 'recording-disk':
-                self.on_stream_recording_disks_change(data)
-            elif field == 'recording-status':
-                self.on_stream_recording_status_change(data)
-            elif field == 'recording-duration':
-                self.on_stream_recording_duration_change(data)
             elif field == 'aux-output-source':
                 self.on_aux_output_source_change(data)
                 if data.index in self.aux_follow_audio:
                     self.on_aux_monitor_source_change(data)
-            elif field == 'dkey-properties-base':
-                self.on_dkey_properties_base_change(data)
-            elif field == 'macro-properties':
-                self.on_macro_properties_change(data)
             elif field == 'audio-meter-levels':
                 self.on_audio_meter_levels_change(data)
             elif field == 'fairlight-meter-levels':
                 self.on_fairlight_meter_levels_change(data)
             elif field == 'fairlight-master-levels':
                 self.on_fairlight_master_levels_change(data)
-            elif field == 'streaming-service':
-                self.on_streaming_service_change(data)
-            elif field == 'streaming-audio-bitrate':
-                self.on_streaming_audio_bitrate_change(data)
-            elif field == 'streaming-stats':
-                self.on_streaming_stats_change(data)
-            elif field == 'streaming-status':
-                self.on_streaming_status_change(data)
 
             else:
                 if field == 'time':
@@ -710,6 +637,7 @@ class AtemWindow(SwitcherPage, MediaPage, AudioPage, CameraPage):
                 raise
             self.log_aw.error(f"Exception while disconnected: {e}")
 
+    @field('time')
     def on_time_sync(self, data):
         seconds = data.total_seconds()
         if self.timecode_mode == 0:
@@ -719,6 +647,7 @@ class AtemWindow(SwitcherPage, MediaPage, AudioPage, CameraPage):
             tod = 3600 * t.tm_hour + 60 * t.tm_min + t.tm_sec
             self.timecode_offset = tod - seconds
 
+    @field('time-config')
     def on_timecode_config_change(self, data):
         self.timecode_mode = data.mode
 
@@ -760,6 +689,11 @@ class AtemWindow(SwitcherPage, MediaPage, AudioPage, CameraPage):
         else:
             self.disable_levels()
 
-#    @field('input-properties')
-#    def on_input_properties_changed(self, data):
-#        print(data)
+    @field('macro-record-status')
+    def on_macro_record_status_changed(self, data):
+        self.set_class(self.headerbar, 'recording', data.is_recording)
+        if data.is_recording:
+            self.macro_status_index.set_label(f"Recording macro {data.index}")
+            self.header_context_stack.set_visible_child_name('macro')
+        else:
+            self.header_context_stack.set_visible_child_name('live')
